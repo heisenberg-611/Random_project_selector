@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserProject, ProjectStatus, DomainFilter } from '@/types/project';
 import { ProjectCard } from './ProjectCard';
 import { StatusFilter } from './StatusFilter';
-import { Plus, ArrowRight, FolderGit2 } from 'lucide-react';
+import { Plus, ArrowRight, FolderGit2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ProjectListProps {
   projects: UserProject[];
@@ -15,6 +15,8 @@ interface ProjectListProps {
   onOpenAddModal: () => void;
   onSwitchToGenerator: () => void;
 }
+
+const ITEMS_PER_PAGE = 20;
 
 export const ProjectList: React.FC<ProjectListProps> = ({
   projects,
@@ -27,6 +29,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
   const [domainFilter, setDomainFilter] = useState<DomainFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Compute counts
   const counts = useMemo(() => {
@@ -56,6 +59,25 @@ export const ProjectList: React.FC<ProjectListProps> = ({
       return true;
     });
   }, [projects, statusFilter, domainFilter, searchQuery]);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, domainFilter, searchQuery]);
+
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(filteredProjects.length / ITEMS_PER_PAGE));
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredProjects.length);
+  const paginatedProjects = useMemo(() => {
+    return filteredProjects.slice(startIndex, endIndex);
+  }, [filteredProjects, startIndex, endIndex]);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="space-y-6">
@@ -127,26 +149,81 @@ export const ProjectList: React.FC<ProjectListProps> = ({
 
       {/* Project Grid with clean fade transition on filter switch */}
       <AnimatePresence mode="wait">
-        {filteredProjects.length > 0 ? (
-          <motion.div
-            key={`grid-${statusFilter}-${domainFilter}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.12, ease: 'easeOut' }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start"
-          >
-            {filteredProjects.map((project, idx) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                index={idx}
-                onUpdateStatus={onUpdateStatus}
-                onUpdateNotes={onUpdateNotes}
-                onDelete={onDeleteProject}
-              />
-            ))}
-          </motion.div>
+        {paginatedProjects.length > 0 ? (
+          <div className="space-y-6">
+            <motion.div
+              key={`grid-${statusFilter}-${domainFilter}-page-${validCurrentPage}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12, ease: 'easeOut' }}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start"
+            >
+              {paginatedProjects.map((project, idx) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  index={startIndex + idx}
+                  onUpdateStatus={onUpdateStatus}
+                  onUpdateNotes={onUpdateNotes}
+                  onDelete={onDeleteProject}
+                />
+              ))}
+            </motion.div>
+
+            {/* Pagination Controls when project count > 20 */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-white/[0.08] font-mono text-xs">
+                <div className="text-[#9CA3AF]">
+                  PAGE <span className="text-[#C9A76C] font-bold">{validCurrentPage}</span> OF{' '}
+                  <span className="text-white font-semibold">{totalPages}</span>
+                  <span className="text-[#52525B] ml-2">
+                    [SHOWING {startIndex + 1}–{endIndex} OF {filteredProjects.length} PROJECTS]
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handlePageChange(Math.max(1, validCurrentPage - 1))}
+                    disabled={validCurrentPage === 1}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#121216] hover:bg-[#18181F] text-[#EDE8E8] border border-white/[0.08] hover:border-[#C9A76C]/40 disabled:opacity-35 disabled:pointer-events-none transition-all cursor-pointer text-xs"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>PREV</span>
+                  </button>
+
+                  {/* Page number pills */}
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`min-w-[32px] h-8 px-2 rounded-lg font-mono text-xs font-bold transition-all cursor-pointer ${
+                          validCurrentPage === pageNum
+                            ? 'salam-gold-btn text-[#0A0A0C]'
+                            : 'bg-[#121216] hover:bg-[#18181F] text-[#9CA3AF] hover:text-white border border-white/[0.08]'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handlePageChange(Math.min(totalPages, validCurrentPage + 1))}
+                    disabled={validCurrentPage === totalPages}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#121216] hover:bg-[#18181F] text-[#EDE8E8] border border-white/[0.08] hover:border-[#C9A76C]/40 disabled:opacity-35 disabled:pointer-events-none transition-all cursor-pointer text-xs"
+                  >
+                    <span>NEXT</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
           /* Empty State */
           <motion.div
