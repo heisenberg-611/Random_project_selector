@@ -5,7 +5,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UserProject, ProjectStatus, DomainFilter } from '@/types/project';
 import { ProjectCard } from './ProjectCard';
 import { StatusFilter } from './StatusFilter';
-import { Plus, ArrowRight, FolderGit2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ProjectDetailModal } from './ProjectDetailModal';
+import {
+  Plus,
+  ArrowRight,
+  FolderGit2,
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  List,
+  Calendar,
+} from 'lucide-react';
+import { DomainIcon } from '@/components/ui/DomainIcon';
+import { DOMAINS, COMPLEXITY_CONFIG } from '@/data/domains';
 
 interface ProjectListProps {
   projects: UserProject[];
@@ -30,6 +42,22 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   const [domainFilter, setDomainFilter] = useState<DomainFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  // Spec Inspector Modal State
+  const [inspectingProject, setInspectingProject] = useState<UserProject | null>(null);
+
+  // Keep inspectingProject synced if user updates status/notes
+  useEffect(() => {
+    if (inspectingProject) {
+      const updated = projects.find((p) => p.id === inspectingProject.id);
+      if (updated) {
+        setInspectingProject(updated);
+      } else {
+        setInspectingProject(null);
+      }
+    }
+  }, [projects, inspectingProject?.id]);
 
   // Compute counts
   const counts = useMemo(() => {
@@ -114,7 +142,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
         </div>
       </div>
 
-      {/* Top Header of Tracker */}
+      {/* Top Header of Tracker with View Mode Toggles */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
         <div>
           <div className="text-xs font-mono text-[#C9A76C] uppercase tracking-wider mb-1">
@@ -126,12 +154,41 @@ export const ProjectList: React.FC<ProjectListProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Grid vs List View Toggle */}
+          <div className="flex items-center gap-1 bg-[#121216] p-1 rounded-lg border border-white/[0.08]">
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-white text-[#0A0A0C] shadow-sm'
+                  : 'text-[#9CA3AF] hover:text-white'
+              }`}
+              title="Grid View"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-white text-[#0A0A0C] shadow-sm'
+                  : 'text-[#9CA3AF] hover:text-white'
+              }`}
+              title="Dense List View"
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
           <button
+            type="button"
             onClick={onOpenAddModal}
             className="salam-gold-btn flex items-center gap-1.5 px-4 py-2.5 text-xs font-mono font-bold cursor-pointer"
           >
             <Plus className="w-4 h-4 text-[#0A0A0C]" />
-            <span>ADD_MANUAL_ENTRY</span>
+            <span>ADD_ENTRY</span>
           </button>
         </div>
       </div>
@@ -147,29 +204,107 @@ export const ProjectList: React.FC<ProjectListProps> = ({
         counts={counts}
       />
 
-      {/* Project Grid with clean fade transition on filter switch */}
+      {/* Project Grid / List View */}
       <AnimatePresence mode="wait">
         {paginatedProjects.length > 0 ? (
           <div className="space-y-6">
-            <motion.div
-              key={`grid-${statusFilter}-${domainFilter}-page-${validCurrentPage}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.12, ease: 'easeOut' }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start"
-            >
-              {paginatedProjects.map((project, idx) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  index={startIndex + idx}
-                  onUpdateStatus={onUpdateStatus}
-                  onUpdateNotes={onUpdateNotes}
-                  onDelete={onDeleteProject}
-                />
-              ))}
-            </motion.div>
+            {viewMode === 'grid' ? (
+              /* Bento 2-Column Grid */
+              <motion.div
+                key={`grid-${statusFilter}-${domainFilter}-page-${validCurrentPage}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.12, ease: 'easeOut' }}
+                className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start"
+              >
+                {paginatedProjects.map((project, idx) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    index={startIndex + idx}
+                    onUpdateStatus={onUpdateStatus}
+                    onOpenInspect={(p) => setInspectingProject(p)}
+                    onDelete={onDeleteProject}
+                  />
+                ))}
+              </motion.div>
+            ) : (
+              /* Dense Engineering List View */
+              <motion.div
+                key={`list-${statusFilter}-${domainFilter}-page-${validCurrentPage}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.12, ease: 'easeOut' }}
+                className="space-y-2 font-mono text-xs"
+              >
+                {paginatedProjects.map((project, idx) => {
+                  const domain = DOMAINS[project.domain] || DOMAINS['web-fullstack'];
+                  const complexity = COMPLEXITY_CONFIG[project.complexity] || COMPLEXITY_CONFIG['weekend-project'];
+                  const formattedDate = new Date(project.createdAt).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                  });
+
+                  return (
+                    <div
+                      key={project.id}
+                      onClick={() => setInspectingProject(project)}
+                      className="salam-bevel group p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:border-[#C9A76C]/40 transition-all"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-[#C9A76C] font-bold shrink-0">
+                          #{String(startIndex + idx + 1).padStart(2, '0')}
+                        </span>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-white group-hover:text-[#E4CCA1] transition-colors truncate">
+                              {project.title}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] border ${domain.badgeBg}`}>
+                              {domain.name.toUpperCase()}
+                            </span>
+                          </div>
+                          {project.tagline && (
+                            <p className="text-[11px] text-[#52525B] truncate mt-0.5">
+                              {project.tagline}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+                        <span className="text-[10px] text-[#52525B] hidden md:inline">
+                          {formattedDate}
+                        </span>
+
+                        <span
+                          className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase ${
+                            project.status === 'completed'
+                              ? 'bg-white text-[#0A0A0C]'
+                              : project.status === 'in-progress'
+                              ? 'bg-[#C9A76C] text-[#0A0A0C]'
+                              : 'bg-white/10 text-[#9CA3AF] border border-white/10'
+                          }`}
+                        >
+                          {project.status === 'completed'
+                            ? 'SHIPPED'
+                            : project.status === 'in-progress'
+                            ? 'BUILDING'
+                            : 'BACKLOG'}
+                        </span>
+
+                        <span className="text-xs text-[#C9A76C] group-hover:translate-x-0.5 transition-transform">
+                          →
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </motion.div>
+            )}
 
             {/* Pagination Controls when project count > 20 */}
             {totalPages > 1 && (
@@ -273,6 +408,16 @@ export const ProjectList: React.FC<ProjectListProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 3D Code Window Spec Inspector Modal */}
+      <ProjectDetailModal
+        project={inspectingProject}
+        isOpen={Boolean(inspectingProject)}
+        onClose={() => setInspectingProject(null)}
+        onUpdateStatus={onUpdateStatus}
+        onUpdateNotes={onUpdateNotes}
+        onDelete={onDeleteProject}
+      />
     </div>
   );
 };
