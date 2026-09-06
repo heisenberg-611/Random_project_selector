@@ -82,7 +82,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 
   return (
     <div
-      className={`salam-bevel p-5 sm:p-6 space-y-4 ${
+      className={`salam-bevel p-5 sm:p-6 space-y-4 h-fit self-start ${
         project.status === 'completed' ? 'border-[#C9A76C]/40' : ''
       }`}
     >

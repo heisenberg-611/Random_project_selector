@@ -134,7 +134,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.12, ease: 'easeOut' }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start"
           >
             {filteredProjects.map((project, idx) => (
               <ProjectCard
