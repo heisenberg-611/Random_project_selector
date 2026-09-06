@@ -79,7 +79,6 @@ code, pre, .font-mono {
 .salam-bevel {
   border-radius: 14px;
   position: relative;
-  overflow: hidden;
   background: var(--salam-card);
   border: 1px solid var(--salam-border);
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
