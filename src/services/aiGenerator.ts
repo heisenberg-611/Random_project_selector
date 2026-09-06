@@ -43,6 +43,47 @@ Respond ONLY with a valid raw JSON object (without markdown code blocks, backtic
   "tips": "string (1 actionable pro-tip, architectural heuristic, or key library advice)"
 }`;
 
+async function universalFetch(
+  url: string,
+  options: { method?: string; headers?: Record<string, string>; body?: string } = {}
+): Promise<Response> {
+  try {
+    const directRes = await fetch(url, {
+      method: options.method || 'GET',
+      headers: options.headers,
+      body: options.body,
+    });
+    return directRes;
+  } catch (directErr) {
+    // If browser blocks fetch (e.g. Chrome Private Network Access / CORS restrictions on 127.0.0.1),
+    // fallback automatically to local Next.js server proxy route
+    try {
+      let parsedBody: unknown = undefined;
+      if (options.body) {
+        try {
+          parsedBody = JSON.parse(options.body);
+        } catch {
+          parsedBody = options.body;
+        }
+      }
+
+      const proxyRes = await fetch('/api/ai-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          method: options.method || 'GET',
+          headers: options.headers || {},
+          body: parsedBody,
+        }),
+      });
+      return proxyRes;
+    } catch {
+      throw directErr;
+    }
+  }
+}
+
 export async function generateProjectWithAi(
   config: AiConfig,
   params: {
@@ -65,7 +106,7 @@ Return ONLY valid JSON.`;
     }
 
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${config.geminiKey.trim()}`;
-    const res = await fetch(endpoint, {
+    const res = await universalFetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -100,7 +141,7 @@ Return ONLY valid JSON.`;
       throw new Error('OpenAI API key is missing. Please configure your API key in AI Settings.');
     }
 
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const res = await universalFetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -154,23 +195,31 @@ Return ONLY valid JSON.`;
 
     for (const endpoint of candidateEndpoints) {
       try {
-        const res = await fetch(endpoint, {
+        const isNativeApi = endpoint.includes('/api/v1/chat');
+        const payload = isNativeApi
+          ? {
+              ...(model ? { model } : {}),
+              input: `${SYSTEM_PROMPT}\n\n${userPrompt}`,
+              temperature: 0.7,
+            }
+          : {
+              ...(model ? { model } : {}),
+              messages: [
+                { role: 'system', content: SYSTEM_PROMPT },
+                { role: 'user', content: userPrompt },
+              ],
+              temperature: 0.7,
+            };
+
+        const res = await universalFetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            ...(model ? { model } : {}),
-            messages: [
-              { role: 'system', content: SYSTEM_PROMPT },
-              { role: 'user', content: userPrompt },
-            ],
-            temperature: 0.7,
-          }),
+          body: JSON.stringify(payload),
         });
 
         if (res.status === 404 && candidateEndpoints.length > 1) {
-          // Try next endpoint candidate
           continue;
         }
 
@@ -184,13 +233,19 @@ Return ONLY valid JSON.`;
         }
 
         const data = await res.json();
-        // Support OpenAI format, LM Studio native v1 format, and Anthropic format
-        rawText =
-          data.choices?.[0]?.message?.content ||
-          data.message?.content ||
-          (Array.isArray(data.content) ? data.content[0]?.text : typeof data.content === 'string' ? data.content : undefined) ||
-          data.output ||
-          data.response;
+        
+        // Extract message from LM Studio REST API v1 or OpenAI format
+        if (Array.isArray(data.output)) {
+          const msgObj = data.output.find((o: { type?: string; content?: string }) => o.type === 'message') || data.output[data.output.length - 1];
+          rawText = msgObj?.content;
+        } else {
+          rawText =
+            data.choices?.[0]?.message?.content ||
+            data.message?.content ||
+            (Array.isArray(data.content) ? data.content[0]?.text : typeof data.content === 'string' ? data.content : undefined) ||
+            data.output ||
+            data.response;
+        }
 
         if (rawText) break;
       } catch (err: unknown) {
@@ -201,7 +256,7 @@ Return ONLY valid JSON.`;
     if (!rawText) {
       if (lastError) {
         throw new Error(
-          `Could not connect to LM Studio at "${rawEndpoint}". Please ensure LM Studio Local Server is running (port 1234) and "Enable CORS" is toggled ON in LM Studio. Details: ${lastError.message}`
+          `Could not connect to LM Studio at "${rawEndpoint}". Please ensure LM Studio Local Server is running (port 1234). Details: ${lastError.message}`
         );
       }
       throw new Error('LM Studio returned an empty response. Verify your loaded model is ready.');
@@ -217,7 +272,7 @@ Return ONLY valid JSON.`;
 
     let res: Response;
     try {
-      res = await fetch(`${endpoint}/api/generate`, {
+      res = await universalFetch(`${endpoint}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -227,7 +282,7 @@ Return ONLY valid JSON.`;
           format: 'json',
         }),
       });
-    } catch (fetchErr: unknown) {
+    } catch {
       throw new Error(
         `Could not connect to Ollama at "${endpoint}". Please ensure Ollama is running on your machine.`
       );
@@ -248,7 +303,19 @@ Return ONLY valid JSON.`;
 
 function parseAiResponse(text: string): ProjectIdea {
   try {
-    const cleanText = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+    // 1. Strip reasoning blocks from models like Qwen 3.5, DeepSeek R1 (<think>...</think>)
+    let cleanText = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+    
+    // 2. Strip markdown code blocks
+    cleanText = cleanText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+
+    // 3. Find first JSON object boundary
+    const firstBrace = cleanText.indexOf('{');
+    const lastBrace = cleanText.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+    }
+
     const parsed = JSON.parse(cleanText);
 
     return {
@@ -286,16 +353,16 @@ export async function fetchLmStudioModels(rawUrl = 'http://localhost:1234'): Pro
   let lastError: unknown = null;
   for (const url of candidateUrls) {
     try {
-      const res = await fetch(url);
+      const res = await universalFetch(url);
       if (!res.ok) continue;
       const data = await res.json();
 
-      // REST API v1 format: { models: [ { id, name, is_loaded } ] }
+      // REST API v1 format: { models: [ { key, display_name, loaded_instances } ] }
       if (Array.isArray(data.models)) {
-        return data.models.map((m: { id?: string; name?: string; key?: string; is_loaded?: boolean; loaded?: boolean }) => ({
-          id: m.id || m.name || m.key || 'unknown',
-          name: m.name || m.id,
-          isLoaded: m.is_loaded ?? m.loaded ?? true,
+        return data.models.map((m: { id?: string; name?: string; key?: string; display_name?: string; is_loaded?: boolean; loaded?: boolean; loaded_instances?: unknown[] }) => ({
+          id: m.key || m.id || m.name || 'unknown',
+          name: m.display_name || m.name || m.key || m.id,
+          isLoaded: (Array.isArray(m.loaded_instances) && m.loaded_instances.length > 0) || m.is_loaded || m.loaded || false,
         }));
       }
 
@@ -313,6 +380,6 @@ export async function fetchLmStudioModels(rawUrl = 'http://localhost:1234'): Pro
   }
 
   throw new Error(
-    `Could not query LM Studio at "${base}". Make sure LM Studio Local Server is running and "Enable CORS" is toggled ON.`
+    `Could not query LM Studio at "${base}". Make sure LM Studio Local Server is running (Status: Running) on port 1234.`
   );
 }
