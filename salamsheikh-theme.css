@@ -1,0 +1,256 @@
+/* ==========================================================================
+   SALAMSHEIKH.COM THEME & DESIGN SYSTEM
+   Source: https://www.salamsheikh.com/
+   Style: Luxury Golden Glow / Editorial Cyberpunk / 3D Interactive Terminal
+   ========================================================================== */
+
+:root {
+  /* Golden Luxury Palette */
+  --salam-gold: #C9A76C;
+  --salam-gold-light: #E4CCA1;
+  --salam-gold-dark: #A58348;
+  --salam-gold-glow: rgba(201, 167, 108, 0.25);
+  --salam-gold-subtle: rgba(201, 167, 108, 0.08);
+
+  /* Dark Canvas */
+  --salam-bg: #0A0A0C;
+  --salam-card: #121216;
+  --salam-card-raised: #18181F;
+  --salam-border: rgba(255, 255, 255, 0.08);
+  --salam-border-strong: rgba(255, 255, 255, 0.15);
+  --salam-border-gold: rgba(201, 167, 108, 0.35);
+
+  /* Editorial Light Mode Elements */
+  --salam-sand: #FAF8F5;
+  --salam-sand-muted: #F0E8DA;
+  --salam-text-dark: #1A1A1A;
+  --salam-text-light: #EDE8E8;
+  --salam-text-muted: #9CA3AF;
+  --salam-text-faint: #52525B;
+
+  /* Typography */
+  --font-salam-heading: 'Syne', sans-serif;
+  --font-salam-mono: 'SFMono-Regular', 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
+}
+
+/* 1. Git Log Boot Sequence Terminal */
+.salam-boot-terminal {
+  background: var(--salam-card);
+  border: 1px solid var(--salam-border);
+  border-radius: 12px;
+  padding: 16px;
+  font-family: var(--font-salam-mono);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 30px var(--salam-gold-subtle);
+}
+
+.salam-git-hash {
+  color: #FBBF24;
+  font-weight: 600;
+}
+
+.salam-git-msg {
+  color: var(--salam-text-light);
+}
+
+.salam-git-time {
+  color: var(--salam-text-faint);
+  margin-left: auto;
+}
+
+/* 2. Geometric Bevel & Corner Scoop Cards */
+.salam-bevel {
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+}
+
+.salam-bevel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(201, 167, 108, 0.4), transparent 50%, rgba(255, 255, 255, 0.1));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.salam-corner-scoop {
+  position: relative;
+}
+
+.salam-corner-squircle {
+  border-radius: 18px;
+}
+
+/* 3. 3D Floating Code Editor Window */
+.salam-code-window {
+  background: rgba(18, 18, 22, 0.9);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--salam-border-gold);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 25px 80px -20px rgba(0, 0, 0, 0.8), 0 0 40px -10px var(--salam-gold-glow);
+  transform-style: preserve-3d;
+}
+
+.salam-code-tabbar {
+  background: rgba(10, 10, 12, 0.7);
+  padding: 8px 12px;
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--salam-border);
+}
+
+.salam-code-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-family: var(--font-salam-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.salam-code-tab.active {
+  background: #FFFFFF;
+  color: #0A0A0C;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.salam-code-tab.inactive {
+  background: transparent;
+  color: var(--salam-text-muted);
+}
+
+.salam-code-tab.inactive:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--salam-text-light);
+}
+
+/* 4. Golden Blinking Cursor */
+.salam-gold-caret {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  background-color: var(--salam-gold);
+  box-shadow: 0 0 8px var(--salam-gold);
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-left: 2px;
+  animation: salamPulse 1s infinite alternate;
+}
+
+@keyframes salamPulse {
+  0% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+/* 5. 8-Bit Pixel Mascot Ghost Animations */
+.salam-ghost-container {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  animation: salamGhostFloat 3s ease-in-out infinite;
+}
+
+@keyframes salamGhostFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-16px); }
+}
+
+.salam-ghost-shadow {
+  background: rgba(0, 0, 0, 0.4);
+  width: 120px;
+  height: 18px;
+  border-radius: 50%;
+  filter: blur(8px);
+  position: absolute;
+  bottom: -24px;
+  left: 10px;
+  animation: salamShadowPulse 3s ease-in-out infinite;
+}
+
+@keyframes salamShadowPulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(0.7); opacity: 0.25; }
+}
+
+/* 6. Bento Stat Counter Cards */
+.salam-stat-card {
+  background: var(--salam-card);
+  border: 1px solid var(--salam-border);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.salam-stat-card:hover {
+  background: #FFFFFF;
+  color: #0A0A0C;
+  transform: translateY(-2px);
+}
+
+.salam-stat-card:hover .salam-stat-label,
+.salam-stat-card:hover .salam-stat-unit {
+  color: rgba(10, 10, 12, 0.6);
+}
+
+.salam-stat-num {
+  font-family: var(--font-salam-mono);
+  font-size: 2.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.salam-stat-bar {
+  height: 2px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  margin-top: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.salam-stat-bar-fill {
+  height: 100%;
+  background: var(--salam-gold);
+  transition: width 1s ease-out;
+}
+
+/* 7. Spotlight Accordion Service Rows */
+.salam-service-row {
+  position: relative;
+  border-bottom: 1px solid var(--salam-border);
+  padding: 28px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.salam-service-row:hover {
+  padding-left: 20px;
+  background: radial-gradient(500px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(201, 167, 108, 0.08), transparent 40%);
+}
+
+.salam-service-num {
+  font-family: var(--font-salam-mono);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--salam-text-faint);
+  transition: color 0.3s ease;
+}
+
+.salam-service-row:hover .salam-service-num {
+  color: var(--salam-gold);
+}

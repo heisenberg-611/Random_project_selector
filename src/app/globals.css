@@ -1,26 +1,256 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Syne:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Golden Luxury Palette from salamsheikh-theme.css */
+  --salam-gold: #C9A76C;
+  --salam-gold-light: #E4CCA1;
+  --salam-gold-dark: #A58348;
+  --salam-gold-glow: rgba(201, 167, 108, 0.25);
+  --salam-gold-subtle: rgba(201, 167, 108, 0.08);
+
+  /* Dark Canvas */
+  --salam-bg: #0A0A0C;
+  --salam-card: #121216;
+  --salam-card-raised: #18181F;
+  --salam-border: rgba(255, 255, 255, 0.08);
+  --salam-border-strong: rgba(255, 255, 255, 0.15);
+  --salam-border-gold: rgba(201, 167, 108, 0.35);
+
+  /* Editorial Light Mode Elements */
+  --salam-sand: #FAF8F5;
+  --salam-sand-muted: #F0E8DA;
+  --salam-text-dark: #1A1A1A;
+  --salam-text-light: #EDE8E8;
+  --salam-text-muted: #9CA3AF;
+  --salam-text-faint: #52525B;
+
+  /* Typography */
+  --font-salam-heading: 'Syne', sans-serif;
+  --font-salam-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+  --font-salam-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --background: #0A0A0C;
+  --foreground: #EDE8E8;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Prevent layout jump and jitter from scrollbar appearance/disappearance */
+html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--salam-bg);
+  color: var(--salam-text-light);
+  font-family: var(--font-salam-body);
+  overflow-x: hidden;
+  min-height: 100vh;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(201, 167, 108, 0.07), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 80% 80%, rgba(201, 167, 108, 0.04), transparent 50%);
+}
+
+h1, h2, h3, .font-heading {
+  font-family: var(--font-salam-heading);
+  letter-spacing: -0.03em;
+}
+
+code, pre, .font-mono {
+  font-family: var(--font-salam-mono);
+}
+
+/* 1. Terminal Box */
+.salam-boot-terminal {
+  background: var(--salam-card);
+  border: 1px solid var(--salam-border);
+  border-radius: 12px;
+  padding: 16px;
+  font-family: var(--font-salam-mono);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 30px var(--salam-gold-subtle);
+}
+
+.salam-git-hash {
+  color: #C9A76C;
+  font-weight: 600;
+}
+
+/* 2. Geometric Bevel Card */
+.salam-bevel {
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  background: var(--salam-card);
+  border: 1px solid var(--salam-border);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.salam-bevel:hover {
+  border-color: var(--salam-border-gold);
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.8), 0 0 25px -5px var(--salam-gold-subtle);
+}
+
+.salam-bevel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(201, 167, 108, 0.35), transparent 45%, rgba(255, 255, 255, 0.05));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* 3. 3D Floating Code Editor Window */
+.salam-code-window {
+  background: rgba(18, 18, 22, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--salam-border-gold);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 25px 80px -20px rgba(0, 0, 0, 0.85), 0 0 40px -10px var(--salam-gold-glow);
+}
+
+.salam-code-tabbar {
+  background: rgba(10, 10, 12, 0.85);
+  padding: 8px 12px;
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--salam-border);
+}
+
+.salam-code-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-family: var(--font-salam-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.salam-code-tab.active {
+  background: #FFFFFF;
+  color: #0A0A0C;
+  border-color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.salam-code-tab.inactive {
+  background: transparent;
+  color: var(--salam-text-muted);
+  border-color: transparent;
+}
+
+.salam-code-tab.inactive:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--salam-text-light);
+}
+
+/* 4. Golden Blinking Cursor */
+.salam-gold-caret {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  background-color: var(--salam-gold);
+  box-shadow: 0 0 8px var(--salam-gold);
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-left: 3px;
+  animation: salamPulse 1s infinite alternate;
+}
+
+@keyframes salamPulse {
+  0% { opacity: 0.2; }
+  100% { opacity: 1; }
+}
+
+/* 5. Bento Stat Counter Cards */
+.salam-stat-card {
+  background: var(--salam-card);
+  border: 1px solid var(--salam-border);
+  padding: 16px 20px;
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.salam-stat-card:hover {
+  background: #18181F;
+  border-color: var(--salam-border-gold);
+}
+
+.salam-stat-num {
+  font-family: var(--font-salam-mono);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--salam-gold-light);
+}
+
+.salam-stat-bar {
+  height: 2px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  margin-top: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.salam-stat-bar-fill {
+  height: 100%;
+  background: var(--salam-gold);
+  transition: width 1s ease-out;
+}
+
+/* 6. Gold Button */
+.salam-gold-btn {
+  background: linear-gradient(135deg, #C9A76C 0%, #E4CCA1 50%, #A58348 100%);
+  color: #0A0A0C;
+  font-weight: 700;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(201, 167, 108, 0.35);
+  transition: all 0.2s ease;
+}
+
+.salam-gold-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 26px rgba(201, 167, 108, 0.5);
+  filter: brightness(1.05);
+}
+
+.salam-gold-btn:active {
+  transform: scale(0.98);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0C;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(201, 167, 108, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(201, 167, 108, 0.6);
 }
