@@ -25,7 +25,7 @@ export const Footer: React.FC<FooterProps> = ({
             <div className="flex items-center justify-center md:justify-start gap-2 font-bold text-white font-heading">
               <span>DEVSPARK // RANDOM_IDEA_MATRIX</span>
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#121216] text-[#C9A76C] border border-[#C9A76C]/30">
-                v1.04
+                v1.0.0
               </span>
             </div>
             <p className="text-[#52525B] text-[11px] font-mono mt-1">

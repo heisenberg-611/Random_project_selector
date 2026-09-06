@@ -297,7 +297,7 @@ export const IdeaRoulette: React.FC<IdeaRouletteProps> = ({
           <div>
             <div className="inline-flex items-center gap-2 text-xs font-mono text-[#C9A76C] uppercase tracking-wider mb-2">
               <span className="w-2 h-2 rounded-full bg-[#C9A76C] animate-ping" />
-              <span>// {isAiMode ? 'AI_AUTONOMOUS_ORACLE' : 'OFFLINE_IDEA_MATRIX_V1.04'}</span>
+              <span>// {isAiMode ? 'AI_AUTONOMOUS_ORACLE' : 'OFFLINE_IDEA_MATRIX_V1.0.0'}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-heading tracking-tight">
               {isAiMode ? 'Autonomous AI Synthesis' : 'Curated Project Matrix'}
