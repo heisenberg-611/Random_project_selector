@@ -8,18 +8,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing or invalid target url' }, { status: 400 });
     }
 
-    // Security check: Only allow localhost / 127.0.0.1 / private loopback or known AI endpoints
     const parsedUrl = new URL(url);
-    const isLocalhost =
-      parsedUrl.hostname === 'localhost' ||
-      parsedUrl.hostname === '127.0.0.1' ||
-      parsedUrl.hostname === '::1' ||
-      parsedUrl.hostname.startsWith('192.168.') ||
-      parsedUrl.hostname.startsWith('10.') ||
-      parsedUrl.hostname.startsWith('172.');
+    const host = parsedUrl.hostname.toLowerCase();
+    const isAllowed =
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      host.startsWith('192.168.') ||
+      host.startsWith('10.') ||
+      host.startsWith('172.') ||
+      host.endsWith('googleapis.com') ||
+      host.endsWith('openai.com') ||
+      host.endsWith('.loca.lt') ||
+      host.endsWith('.trycloudflare.com') ||
+      host.endsWith('.ngrok-free.app') ||
+      host.endsWith('.ngrok.io') ||
+      host.endsWith('.ts.net') ||
+      host.endsWith('.pinggy.link');
 
-    if (!isLocalhost && !parsedUrl.hostname.endsWith('googleapis.com') && !parsedUrl.hostname.endsWith('openai.com')) {
-      return NextResponse.json({ error: 'Forbidden target host' }, { status: 403 });
+    if (!isAllowed) {
+      return NextResponse.json({ error: 'Target host is not permitted by proxy security filter' }, { status: 403 });
     }
 
     const fetchOptions: RequestInit = {

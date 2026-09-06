@@ -344,6 +344,28 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
                   />
                 </div>
 
+                {/* Vercel HTTPS Mixed Content Helper */}
+                {typeof window !== 'undefined' && window.location.protocol === 'https:' && (
+                  <div className="p-2.5 rounded-lg bg-amber-950/30 border border-amber-500/30 text-[11px] text-amber-200/90 space-y-1.5 leading-relaxed">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                      <span>Connecting from Vercel (HTTPS):</span>
+                    </div>
+                    <p className="text-[10px]">
+                      Web browsers block HTTPS websites from fetching insecure <code className="bg-black/50 px-1 rounded text-amber-200">http://localhost</code> (Mixed Content).
+                    </p>
+                    <p className="text-[10px]">
+                      To connect your local LM Studio to Vercel, open a free HTTPS tunnel on your terminal:
+                    </p>
+                    <div className="p-1.5 rounded bg-black/70 font-mono text-[10px] text-[#E4CCA1] border border-amber-500/20">
+                      <code>npx localtunnel --port 1234</code>
+                    </div>
+                    <p className="text-[9px] text-[#9CA3AF]">
+                      Paste the generated <code className="text-[#E4CCA1]">https://*.loca.lt</code> URL above &amp; click Test &amp; Detect.
+                    </p>
+                  </div>
+                )}
+
                 {/* LM Studio Supported Endpoints & Setup Box */}
                 <div className="p-3 rounded-lg bg-[#0A0A0C] border border-[#C9A76C]/30 text-[11px] text-[#9CA3AF] space-y-2 leading-relaxed">
                   <div className="flex items-center justify-between">
@@ -412,6 +434,25 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
                     className="w-full p-2.5 rounded-lg bg-[#0A0A0C] border border-white/[0.1] text-[#EDE8E8] focus:outline-none focus:border-[#C9A76C]"
                   />
                 </div>
+
+                {/* Vercel HTTPS Mixed Content Helper for Ollama */}
+                {typeof window !== 'undefined' && window.location.protocol === 'https:' && (
+                  <div className="p-2.5 rounded-lg bg-amber-950/30 border border-amber-500/30 text-[11px] text-amber-200/90 space-y-1.5 leading-relaxed">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                      <span>Connecting from Vercel (HTTPS):</span>
+                    </div>
+                    <p className="text-[10px]">
+                      To connect your local Ollama to Vercel, tunnel port 11434:
+                    </p>
+                    <div className="p-1.5 rounded bg-black/70 font-mono text-[10px] text-[#E4CCA1] border border-amber-500/20">
+                      <code>npx localtunnel --port 11434</code>
+                    </div>
+                    <p className="text-[9px] text-[#9CA3AF]">
+                      Paste the generated <code className="text-[#E4CCA1]">https://*.loca.lt</code> URL above.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
