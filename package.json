@@ -1,6 +1,7 @@
 {
-  "name": "app-init",
-  "version": "0.1.0",
+  "name": "devspark-project-oracle",
+  "version": "1.0.0",
+  "description": "Autonomous software project matrix & real-time AI synthesis engine for developers and engineers.",
   "private": true,
   "scripts": {
     "dev": "next dev",
