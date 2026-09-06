@@ -38,8 +38,8 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between h-16 sm:h-20 gap-3">
           {/* Logo & Brand - Editorial Terminal */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#121216] border border-[#C9A76C]/40 flex items-center justify-center shadow-lg shadow-[#C9A76C]/10 shrink-0">
-              <Cpu className="w-4 h-4 text-[#C9A76C]" />
+            <div className="w-9 h-9 rounded-lg bg-[#121216] border border-[#C9A76C]/40 flex items-center justify-center shadow-lg shadow-[#C9A76C]/20 shrink-0">
+              <Zap className="w-4 h-4 text-[#C9A76C] fill-[#C9A76C]/20" />
             </div>
 
             <div>

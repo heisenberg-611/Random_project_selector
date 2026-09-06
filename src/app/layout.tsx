@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DevSpark | Random Project Idea Selector & Status Tracker",
+  title: "DEVSPARK // SYS_ORACLE - Random Project Idea Matrix & Tracker",
   description:
-    "Generate random project ideas across AI, Fullstack Web, DevOps, CyberSecurity, GameDev, and mobile apps when you're out of ideas. Track progress effortlessly with zero tracking and offline JSON backup.",
+    "Autonomous software project matrix & real-time AI synthesis engine across 10 modern technical sectors. Track progress effortlessly with zero telemetry and offline JSON backup.",
   keywords: [
     "project ideas",
     "random project generator",
@@ -23,12 +23,20 @@ export const metadata: Metadata = {
     "portfolio project generator",
     "developer tools",
     "project tracker",
+    "AI project synthesis",
   ],
   authors: [{ name: "DevSpark" }],
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#090a0f",
+  themeColor: "#0A0A0C",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
