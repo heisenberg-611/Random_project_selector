@@ -129,47 +129,83 @@ Return ONLY valid JSON.`;
     return parseAiResponse(rawText);
   }
 
-  // 3. LM Studio (Local Machine - OpenAI-compatible server)
+  // 3. LM Studio (Local Machine - Supports both REST API v1 and OpenAI-compatible endpoints)
   if (config.provider === 'lmstudio') {
     const rawEndpoint = (config.lmStudioEndpoint?.trim() || 'http://localhost:1234').replace(/\/$/, '');
-    const endpoint = rawEndpoint.endsWith('/v1')
-      ? `${rawEndpoint}/chat/completions`
-      : `${rawEndpoint}/v1/chat/completions`;
     const model = config.lmStudioModel?.trim() || undefined;
 
-    let res: Response;
-    try {
-      res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...(model ? { model } : {}),
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.7,
-        }),
-      });
-    } catch (fetchErr: unknown) {
-      throw new Error(
-        `Could not connect to LM Studio at "${endpoint}". Please ensure LM Studio Local Server is running (port 1234) and "Enable CORS" is toggled ON in LM Studio.`
-      );
+    // Build candidate endpoints: OpenAI-compatible (/v1/chat/completions) & LM Studio Native REST API (/api/v1/chat)
+    let candidateEndpoints: string[] = [];
+    if (rawEndpoint.endsWith('/chat/completions') || rawEndpoint.endsWith('/api/v1/chat')) {
+      candidateEndpoints = [rawEndpoint];
+    } else if (rawEndpoint.endsWith('/v1')) {
+      candidateEndpoints = [`${rawEndpoint}/chat/completions`, `${rawEndpoint.replace(/\/v1$/, '')}/api/v1/chat`];
+    } else if (rawEndpoint.endsWith('/api/v1')) {
+      candidateEndpoints = [`${rawEndpoint}/chat`, `${rawEndpoint.replace(/\/api\/v1$/, '')}/v1/chat/completions`];
+    } else {
+      candidateEndpoints = [
+        `${rawEndpoint}/v1/chat/completions`,
+        `${rawEndpoint}/api/v1/chat`,
+      ];
     }
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(
-        err.error?.message ||
-        `LM Studio returned error status ${res.status}. Verify a model is loaded in LM Studio.`
-      );
+    let lastError: Error | null = null;
+    let rawText: string | undefined = undefined;
+
+    for (const endpoint of candidateEndpoints) {
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...(model ? { model } : {}),
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: userPrompt },
+            ],
+            temperature: 0.7,
+          }),
+        });
+
+        if (res.status === 404 && candidateEndpoints.length > 1) {
+          // Try next endpoint candidate
+          continue;
+        }
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(
+            err.error?.message ||
+            err.message ||
+            `LM Studio returned HTTP status ${res.status}. Verify a model is loaded in LM Studio.`
+          );
+        }
+
+        const data = await res.json();
+        // Support OpenAI format, LM Studio native v1 format, and Anthropic format
+        rawText =
+          data.choices?.[0]?.message?.content ||
+          data.message?.content ||
+          (Array.isArray(data.content) ? data.content[0]?.text : typeof data.content === 'string' ? data.content : undefined) ||
+          data.output ||
+          data.response;
+
+        if (rawText) break;
+      } catch (err: unknown) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+      }
     }
 
-    const data = await res.json();
-    const rawText = data.choices?.[0]?.message?.content;
-    if (!rawText) throw new Error('LM Studio returned an empty response. Verify your loaded model is ready.');
+    if (!rawText) {
+      if (lastError) {
+        throw new Error(
+          `Could not connect to LM Studio at "${rawEndpoint}". Please ensure LM Studio Local Server is running (port 1234) and "Enable CORS" is toggled ON in LM Studio. Details: ${lastError.message}`
+        );
+      }
+      throw new Error('LM Studio returned an empty response. Verify your loaded model is ready.');
+    }
 
     return parseAiResponse(rawText);
   }
@@ -226,7 +262,57 @@ function parseAiResponse(text: string): ProjectIdea {
       suggestedStack: Array.isArray(parsed.suggestedStack) ? parsed.suggestedStack : ['Next.js', 'TypeScript', 'Tailwind CSS'],
       tips: parsed.tips || undefined,
     };
-  } catch (err) {
+  } catch {
     throw new Error('Failed to parse AI output into valid specification schema. Please retry.');
   }
+}
+
+export interface LmStudioModelInfo {
+  id: string;
+  name?: string;
+  isLoaded?: boolean;
+}
+
+/**
+ * Discovers loaded / available models from LM Studio using REST API v1 or OpenAI-compatible endpoints.
+ */
+export async function fetchLmStudioModels(rawUrl = 'http://localhost:1234'): Promise<LmStudioModelInfo[]> {
+  const base = rawUrl.trim().replace(/\/$/, '').replace(/\/api\/v1$/, '').replace(/\/v1$/, '');
+  const candidateUrls = [
+    `${base}/api/v1/models`, // LM Studio Native REST API v1
+    `${base}/v1/models`,     // OpenAI-compatible
+  ];
+
+  let lastError: unknown = null;
+  for (const url of candidateUrls) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const data = await res.json();
+
+      // REST API v1 format: { models: [ { id, name, is_loaded } ] }
+      if (Array.isArray(data.models)) {
+        return data.models.map((m: { id?: string; name?: string; key?: string; is_loaded?: boolean; loaded?: boolean }) => ({
+          id: m.id || m.name || m.key || 'unknown',
+          name: m.name || m.id,
+          isLoaded: m.is_loaded ?? m.loaded ?? true,
+        }));
+      }
+
+      // OpenAI format: { data: [ { id: "..." } ] }
+      if (Array.isArray(data.data)) {
+        return data.data.map((m: { id: string }) => ({
+          id: m.id,
+          name: m.id,
+          isLoaded: true,
+        }));
+      }
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw new Error(
+    `Could not query LM Studio at "${base}". Make sure LM Studio Local Server is running and "Enable CORS" is toggled ON.`
+  );
 }

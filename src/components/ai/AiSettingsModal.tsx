@@ -2,7 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AiConfig, AiProvider, DEFAULT_AI_CONFIG } from '@/services/aiGenerator';
+import {
+  AiConfig,
+  AiProvider,
+  DEFAULT_AI_CONFIG,
+  fetchLmStudioModels,
+  LmStudioModelInfo,
+} from '@/services/aiGenerator';
 import { X, Cpu, Key, Check, ShieldCheck, Server, ExternalLink, HardDrive, Terminal } from 'lucide-react';
 
 const AI_CONFIG_KEY = 'devspark_ai_config_v1';
@@ -30,12 +36,51 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
   const [config, setConfig] = useState<AiConfig>(DEFAULT_AI_CONFIG);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  // LM Studio live ping / discovery state
+  const [isPingingLm, setIsPingingLm] = useState(false);
+  const [lmPingResult, setLmPingResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [discoveredLmModels, setDiscoveredLmModels] = useState<LmStudioModelInfo[]>([]);
+
   useEffect(() => {
     if (isOpen) {
       setConfig(loadStoredAiConfig());
       setSavedSuccess(false);
+      setLmPingResult(null);
+      setDiscoveredLmModels([]);
     }
   }, [isOpen]);
+
+  const handlePingLmStudio = async () => {
+    setIsPingingLm(true);
+    setLmPingResult(null);
+    try {
+      const models = await fetchLmStudioModels(config.lmStudioEndpoint || 'http://localhost:1234');
+      setDiscoveredLmModels(models);
+      if (models.length > 0) {
+        setLmPingResult({
+          success: true,
+          message: `Connected! Found ${models.length} model${models.length > 1 ? 's' : ''} on local server.`,
+        });
+        // Auto-select first loaded model if not set
+        if (!config.lmStudioModel && models[0]) {
+          setConfig((prev) => ({ ...prev, lmStudioModel: models[0].id }));
+        }
+      } else {
+        setLmPingResult({
+          success: true,
+          message: 'Connected to LM Studio server! No loaded models found (load a model in LM Studio).',
+        });
+      }
+    } catch (err: unknown) {
+      setDiscoveredLmModels([]);
+      setLmPingResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Could not reach LM Studio.',
+      });
+    } finally {
+      setIsPingingLm(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -223,38 +268,118 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({
                     </label>
                     <span className="text-[10px] text-[#C9A76C]">Default: http://localhost:1234</span>
                   </div>
-                  <input
-                    type="text"
-                    value={config.lmStudioEndpoint || 'http://localhost:1234'}
-                    onChange={(e) => setConfig({ ...config, lmStudioEndpoint: e.target.value })}
-                    placeholder="http://localhost:1234"
-                    className="w-full p-2.5 rounded-lg bg-[#0A0A0C] border border-white/[0.1] text-[#EDE8E8] focus:outline-none focus:border-[#C9A76C]"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={config.lmStudioEndpoint || 'http://localhost:1234'}
+                      onChange={(e) => setConfig({ ...config, lmStudioEndpoint: e.target.value })}
+                      placeholder="http://localhost:1234"
+                      className="w-full p-2.5 rounded-lg bg-[#0A0A0C] border border-white/[0.1] text-[#EDE8E8] focus:outline-none focus:border-[#C9A76C]"
+                    />
+                    <button
+                      type="button"
+                      disabled={isPingingLm}
+                      onClick={handlePingLmStudio}
+                      className="px-3 py-2 rounded-lg bg-[#18181C] border border-[#C9A76C]/40 text-[#E4CCA1] hover:bg-[#202026] text-xs font-bold shrink-0 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {isPingingLm ? (
+                        <div className="w-3.5 h-3.5 border-2 border-[#C9A76C] border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Terminal className="w-3.5 h-3.5 text-[#C9A76C]" />
+                      )}
+                      <span>{isPingingLm ? 'Scanning...' : 'Test & Detect'}</span>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Discovery / Ping Status */}
+                {lmPingResult && (
+                  <div
+                    className={`p-2.5 rounded-lg border text-[11px] leading-relaxed flex items-start gap-2 ${
+                      lmPingResult.success
+                        ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
+                        : 'bg-rose-950/30 border-rose-500/40 text-rose-300'
+                    }`}
+                  >
+                    {lmPingResult.success ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    ) : (
+                      <span className="text-rose-400 font-bold shrink-0">!</span>
+                    )}
+                    <div>
+                      <p className="font-bold">{lmPingResult.message}</p>
+                      {discoveredLmModels.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <span className="text-[10px] text-[#9CA3AF] self-center">Available Models:</span>
+                          {discoveredLmModels.map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => setConfig({ ...config, lmStudioModel: m.id })}
+                              className={`px-2 py-0.5 rounded text-[10px] border transition-colors cursor-pointer ${
+                                config.lmStudioModel === m.id
+                                  ? 'bg-[#C9A76C] text-[#0A0A0C] border-[#C9A76C] font-bold'
+                                  : 'bg-[#0A0A0C] text-[#E4CCA1] border-white/20 hover:border-[#C9A76C]'
+                              }`}
+                            >
+                              {m.name || m.id}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-[#EDE8E8] font-bold mb-1">
-                    MODEL_IDENTIFIER <span className="text-[#52525B] font-normal">(OPTIONAL)</span>
+                    MODEL_IDENTIFIER <span className="text-[#52525B] font-normal">(OPTIONAL - LEAVE BLANK FOR LOADED MODEL)</span>
                   </label>
                   <input
                     type="text"
                     value={config.lmStudioModel || ''}
                     onChange={(e) => setConfig({ ...config, lmStudioModel: e.target.value })}
-                    placeholder="e.g. qwen2.5-coder-7b, deepseek-r1, or leave blank to use loaded model"
+                    placeholder="e.g. qwen2.5-coder-7b, llama-3.2-3b, or leave blank to use loaded model"
                     className="w-full p-2.5 rounded-lg bg-[#0A0A0C] border border-white/[0.1] text-[#EDE8E8] focus:outline-none focus:border-[#C9A76C]"
                   />
                 </div>
 
-                {/* LM Studio Help Box */}
-                <div className="p-3 rounded-lg bg-[#0A0A0C] border border-[#C9A76C]/30 text-[11px] text-[#9CA3AF] space-y-1 leading-relaxed">
-                  <div className="text-[#E4CCA1] font-bold flex items-center gap-1.5">
-                    <HardDrive className="w-3.5 h-3.5 text-[#C9A76C]" />
-                    <span>LM Studio Setup Instructions:</span>
+                {/* LM Studio Supported Endpoints & Setup Box */}
+                <div className="p-3 rounded-lg bg-[#0A0A0C] border border-[#C9A76C]/30 text-[11px] text-[#9CA3AF] space-y-2 leading-relaxed">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[#E4CCA1] font-bold flex items-center gap-1.5">
+                      <HardDrive className="w-3.5 h-3.5 text-[#C9A76C]" />
+                      <span>Supported LM Studio Endpoints:</span>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] bg-[#1C1C22] text-[#C9A76C] border border-[#C9A76C]/30 font-bold">
+                      REST API v1 & OpenAI
+                    </span>
                   </div>
-                  <p>1. Open <strong>LM Studio</strong> on your machine.</p>
-                  <p>2. Click the <strong>Local Server</strong> icon (<code className="text-[#C9A76C]">&lt;-&gt;</code>) in the left sidebar.</p>
-                  <p>3. Load any model (e.g. Qwen, Llama 3, DeepSeek) and click <strong>Start Server</strong> on port 1234.</p>
-                  <p>4. Ensure <strong>Enable CORS</strong> is checked in LM Studio server settings.</p>
+
+                  <div className="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
+                    <div className="p-1.5 rounded bg-[#121216] border border-white/[0.06] text-[#EDE8E8]">
+                      <span className="text-[#C9A76C] font-bold">POST</span> /api/v1/chat
+                      <div className="text-[9px] text-[#9CA3AF]">Native REST API v1</div>
+                    </div>
+                    <div className="p-1.5 rounded bg-[#121216] border border-white/[0.06] text-[#EDE8E8]">
+                      <span className="text-[#C9A76C] font-bold">POST</span> /v1/chat/completions
+                      <div className="text-[9px] text-[#9CA3AF]">OpenAI-compatible</div>
+                    </div>
+                    <div className="p-1.5 rounded bg-[#121216] border border-white/[0.06] text-[#EDE8E8]">
+                      <span className="text-emerald-400 font-bold">GET</span> /api/v1/models
+                      <div className="text-[9px] text-[#9CA3AF]">Model auto-discovery</div>
+                    </div>
+                    <div className="p-1.5 rounded bg-[#121216] border border-white/[0.06] text-[#EDE8E8]">
+                      <span className="text-[#C9A76C] font-bold">POST</span> /v1/messages
+                      <div className="text-[9px] text-[#9CA3AF]">Anthropic-compatible</div>
+                    </div>
+                  </div>
+
+                  <div className="pt-1.5 border-t border-white/[0.06] text-[10px] text-[#9CA3AF] space-y-0.5">
+                    <p>1. Open <strong>LM Studio</strong> &rarr; Click <strong>Local Server</strong> (<code className="text-[#C9A76C]">&lt;-&gt;</code>) icon.</p>
+                    <p>2. Load any model &amp; click <strong>Start Server</strong> (default port 1234).</p>
+                    <p>3. Ensure <strong>Enable CORS</strong> is toggled ON in LM Studio settings.</p>
+                  </div>
                 </div>
               </div>
             )}

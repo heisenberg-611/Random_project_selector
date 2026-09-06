@@ -117,7 +117,7 @@ Featuring an **offline curated database of 70+ deeply technical specifications**
 | **Animations** | [Framer Motion](https://www.framer.com/motion/) |
 | **Celebrations** | [Canvas Confetti](https://www.npmjs.com/package/canvas-confetti) |
 | **Typography** | Google Fonts (`Syne`, `JetBrains Mono`, `Inter`) |
-| **AI Providers** | Google Gemini API, OpenAI API, Local Ollama REST API |
+| **AI Providers** | Google Gemini API, OpenAI API, LM Studio (REST API v1 & OpenAI), Local Ollama |
 
 ---
 
