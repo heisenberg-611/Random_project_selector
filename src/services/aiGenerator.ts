@@ -1,11 +1,13 @@
 import { ProjectIdea, DomainId, DomainFilter, Complexity, ComplexityFilter } from '@/types/project';
 
-export type AiProvider = 'gemini' | 'openai' | 'ollama';
+export type AiProvider = 'gemini' | 'openai' | 'lmstudio' | 'ollama';
 
 export interface AiConfig {
   provider: AiProvider;
   geminiKey?: string;
   openaiKey?: string;
+  lmStudioEndpoint?: string;
+  lmStudioModel?: string;
   ollamaEndpoint?: string;
   ollamaModel?: string;
 }
@@ -14,6 +16,8 @@ export const DEFAULT_AI_CONFIG: AiConfig = {
   provider: 'gemini',
   geminiKey: '',
   openaiKey: '',
+  lmStudioEndpoint: 'http://localhost:1234',
+  lmStudioModel: '',
   ollamaEndpoint: 'http://localhost:11434',
   ollamaModel: 'llama3',
 };
@@ -54,6 +58,7 @@ export async function generateProjectWithAi(
 
 Return ONLY valid JSON.`;
 
+  // 1. Google Gemini (Cloud)
   if (config.provider === 'gemini') {
     if (!config.geminiKey?.trim()) {
       throw new Error('Google Gemini API key is missing. Please configure your API key in AI Settings.');
@@ -89,6 +94,7 @@ Return ONLY valid JSON.`;
     return parseAiResponse(rawText);
   }
 
+  // 2. OpenAI (Cloud)
   if (config.provider === 'openai') {
     if (!config.openaiKey?.trim()) {
       throw new Error('OpenAI API key is missing. Please configure your API key in AI Settings.');
@@ -123,23 +129,76 @@ Return ONLY valid JSON.`;
     return parseAiResponse(rawText);
   }
 
+  // 3. LM Studio (Local Machine - OpenAI-compatible server)
+  if (config.provider === 'lmstudio') {
+    const rawEndpoint = (config.lmStudioEndpoint?.trim() || 'http://localhost:1234').replace(/\/$/, '');
+    const endpoint = rawEndpoint.endsWith('/v1')
+      ? `${rawEndpoint}/chat/completions`
+      : `${rawEndpoint}/v1/chat/completions`;
+    const model = config.lmStudioModel?.trim() || undefined;
+
+    let res: Response;
+    try {
+      res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...(model ? { model } : {}),
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.7,
+        }),
+      });
+    } catch (fetchErr: unknown) {
+      throw new Error(
+        `Could not connect to LM Studio at "${endpoint}". Please ensure LM Studio Local Server is running (port 1234) and "Enable CORS" is toggled ON in LM Studio.`
+      );
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(
+        err.error?.message ||
+        `LM Studio returned error status ${res.status}. Verify a model is loaded in LM Studio.`
+      );
+    }
+
+    const data = await res.json();
+    const rawText = data.choices?.[0]?.message?.content;
+    if (!rawText) throw new Error('LM Studio returned an empty response. Verify your loaded model is ready.');
+
+    return parseAiResponse(rawText);
+  }
+
+  // 4. Ollama (Local Machine)
   if (config.provider === 'ollama') {
     const endpoint = (config.ollamaEndpoint?.trim() || 'http://localhost:11434').replace(/\/$/, '');
     const model = config.ollamaModel?.trim() || 'llama3';
 
-    const res = await fetch(`${endpoint}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        prompt: `${SYSTEM_PROMPT}\n\n${userPrompt}`,
-        stream: false,
-        format: 'json',
-      }),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${endpoint}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          prompt: `${SYSTEM_PROMPT}\n\n${userPrompt}`,
+          stream: false,
+          format: 'json',
+        }),
+      });
+    } catch (fetchErr: unknown) {
+      throw new Error(
+        `Could not connect to Ollama at "${endpoint}". Please ensure Ollama is running on your machine.`
+      );
+    }
 
     if (!res.ok) {
-      throw new Error(`Ollama connection failed at ${endpoint} (Status: ${res.status}). Ensure Ollama is running.`);
+      throw new Error(`Ollama connection failed at ${endpoint} (Status: ${res.status}). Ensure Ollama is running with model "${model}".`);
     }
 
     const data = await res.json();

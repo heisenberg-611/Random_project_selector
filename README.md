@@ -40,6 +40,7 @@ Featuring an **offline curated database of 70+ deeply technical specifications**
 - **Supported AI Providers**:
   - **Google Gemini** (Gemini 1.5 Flash / 2.0 Flash) — ultra-fast structured JSON generation.
   - **OpenAI** (GPT-4o / GPT-4o-mini).
+  - **Local LM Studio** (`http://localhost:1234`) — local offline OpenAI-compatible inference with loaded GGUF models.
   - **Local Ollama** (`http://localhost:11434`) — 100% private, offline, air-gapped local LLMs (Llama 3, Mistral, Qwen, DeepSeek).
 - **Custom Prompt / Vibe Bar**: Inject specific constraints (e.g., *"WebAssembly audio synthesizer with zero backend"* or *"Distributed actor framework in Rust"*).
 

@@ -235,7 +235,7 @@ export const IdeaRoulette: React.FC<IdeaRouletteProps> = ({
             className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#121216] hover:bg-[#18181F] text-[#EDE8E8] border border-white/[0.08] hover:border-[#C9A76C]/40 text-xs font-mono transition-all cursor-pointer"
           >
             <Settings className="w-3.5 h-3.5 text-[#C9A76C]" />
-            <span>AI_CONFIG [{aiConfig.provider.toUpperCase()}]</span>
+            <span>AI_CONFIG [{aiConfig.provider === 'lmstudio' ? 'LM_STUDIO' : aiConfig.provider.toUpperCase()}]</span>
           </button>
         </div>
 
@@ -249,7 +249,7 @@ export const IdeaRoulette: React.FC<IdeaRouletteProps> = ({
           >
             <div className="flex items-center justify-between text-[11px] text-[#C9A76C] font-bold">
               <span>// CUSTOM_AI_PROMPT_OR_VIBE (OPTIONAL):</span>
-              <span className="text-[#52525B]">PROVIDER: {aiConfig.provider.toUpperCase()}</span>
+              <span className="text-[#52525B]">PROVIDER: {aiConfig.provider === 'lmstudio' ? 'LM_STUDIO (LOCAL)' : aiConfig.provider.toUpperCase()}</span>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -286,7 +286,7 @@ export const IdeaRoulette: React.FC<IdeaRouletteProps> = ({
                 onClick={() => setIsAiSettingsOpen(true)}
                 className="ml-2 text-[#C9A76C] underline cursor-pointer"
               >
-                Configure API Key
+                Configure API Key / Server
               </button>
             </div>
           </div>
@@ -304,7 +304,7 @@ export const IdeaRoulette: React.FC<IdeaRouletteProps> = ({
             </h2>
             <p className="text-xs sm:text-sm text-[#9CA3AF] font-mono mt-1">
               {isAiMode
-                ? 'Generate endless real-time software specifications using Gemini, OpenAI, or Local Ollama.'
+                ? 'Generate endless real-time software specifications using Gemini, OpenAI, LM Studio, or Local Ollama.'
                 : 'Over 50+ specialized offline project blueprints spanning 10 modern technical domains.'}
             </p>
           </div>
