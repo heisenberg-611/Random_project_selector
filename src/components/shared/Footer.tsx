@@ -78,9 +78,6 @@ export const Footer: React.FC<FooterProps> = ({
         {/* Copyright & Disclaimer */}
         <div className="mt-8 pt-6 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-[#52525B]">
           <p>© {new Date().getFullYear()} DEVSPARK. ZERO TELEMETRY • OPEN SPECIFICATIONS.</p>
-          <div>
-            <span>INSPIRED BY SALAMSHEIKH.COM DESIGN LANGUAGE</span>
-          </div>
         </div>
       </div>
     </footer>
